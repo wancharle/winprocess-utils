@@ -375,11 +375,11 @@ void WinProcess::ScanBuffer(const FunctionCallbackInfo<Value>& args) {
 	Local<Object> bufferObj    = args[0]->ToObject();
 	char*         bufferData   = Buffer::Data(bufferObj);
 	size_t        bufferLength = Buffer::Length(bufferObj);
-	std::cout<<"Buffer='"<<bufferData[0]<<"'\n";
 	// param 2: pulo -> pulo=1 "HELLO" pulo=2 "H E L L O", pulo=3 "H  E  L  L  O" ...
 	int pulo  = args[1]->IntegerValue();
 	if (pulo <=0) pulo =1;
-	std::cout<<"Busca com pulo="<< pulo<<"\n";
+
+
   	WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());
 	
 
