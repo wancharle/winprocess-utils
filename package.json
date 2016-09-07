@@ -1,0 +1,22 @@
+{
+  "name": "winprocess-utils",
+  "version": "1.0.0",
+  "description": "Node bind to read, write and scan memory of a windows process.",
+  "main": "winprocess.js",
+  "scripts": {
+    "compile":"node-gyp configure && node-gyp build && node test.js",
+    "test": "node test.js",
+    "install": "node-gyp rebuild"
+  },
+  "keywords": [
+    "memory",
+    "process",
+    "read",
+    "write",
+    "ReadProcessMemory",
+    "WriteProcessMemory"
+  ],
+  "author": "Wancharle S Quirino",
+  "license": "ISC",
+  "gypfile": true
+}
