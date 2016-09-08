@@ -5,6 +5,7 @@
   "main": "winprocess.js",
   "scripts": {
     "compile":"node-gyp configure && node-gyp build && node test.js",
+	  "build":"node-gyp build && node test.js",
     "test": "node test.js",
     "install": "node-gyp rebuild"
   },

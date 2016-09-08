@@ -164,12 +164,9 @@ void* Search( HANDLE hProcess)
         fromAddress = (void*)( (unsigned long)fromAddress + mbi.RegionSize); 
     } while(fromAddress < si.lpMaximumApplicationAddress); 
 return 0;
-}  
-void *Scanchar(DWORD start, DWORD end, HANDLE hProcess, char * marcador,size_t  tamanho,int pulo){ 
-    double v1, v2, v3, v4;
-    
-    //LPBYTE buffer = new BYTE[end-start];
-    //ReadProcessMemory(hProcess, (void*)start, buffer, end - start, NULL);
+}
+  
+void *ScanChar(DWORD start, DWORD end, HANDLE hProcess, char * marcador,size_t  tamanho,int pulo){ 
     char *buffer = new char[end-start];
 	ReadProcessMemory(hProcess, (void *)start, buffer, end - start, NULL);
     for(unsigned i = 0; i < (end-start); ++i) 
@@ -183,6 +180,56 @@ void *Scanchar(DWORD start, DWORD end, HANDLE hProcess, char * marcador,size_t  
         {                                      
             return (void*)(start+i);        
         } 
+    } 
+    delete[] buffer; 
+    return 0; 
+} 
+
+void *ScanNumberDouble(DWORD start, DWORD end, HANDLE hProcess, double valor_marcador){  
+    char *buffer = new char[end-start];
+	double valor ;
+	
+	ReadProcessMemory(hProcess, (void *)start, buffer, end - start, NULL);
+    for(unsigned i = 0; i < (end-start);) 
+    { 
+		valor = *((double*)(buffer+i));
+		
+	    if(valor==valor_marcador) 
+        {                            
+            return (void*)(start+i);        
+        } 
+		 i=i+1;
+		 
+    } 
+    delete[] buffer; 
+
+    return 0; 
+ 
+} 
+
+void *ScanNumberDoubleList(DWORD start, DWORD end, HANDLE hProcess, double* marcador, int tamanho,int tamanhodouble){  
+    char *buffer = new char[end-start];
+	double valor ;
+		
+	ReadProcessMemory(hProcess, (void *)start, buffer, end - start, NULL);
+    for(unsigned i = 0; i < (end-start);) 
+    { 
+		int acertos = 0;
+		for(unsigned j=0;j<tamanho;){
+			valor = *((double*)(buffer+i+j*tamanhodouble)); // 16 é tamanho gasto para armazenar um double em 64bits 
+			if(valor== marcador[j]) {
+				std::cout<<valor<<"|"<< std::hex<<(start+i+j*tamanhodouble)<<"|\n";
+					acertos+=1;
+			}else{
+				break;
+			}
+			j+=1;
+		}
+	    if(acertos==tamanho) 
+        {                                      
+            return (void*)(start+i);        
+        } 
+		 i=i+1;
     } 
     delete[] buffer; 
     return 0; 
@@ -273,7 +320,6 @@ void hello(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 
 
-
 void getProcessIdByWindow(const v8::FunctionCallbackInfo<Value>& args) {
  	Isolate* isolate = args.GetIsolate();  
  	v8::String::Utf8Value param1(args[0]->ToString());
@@ -287,6 +333,7 @@ void getProcessIdByWindow(const v8::FunctionCallbackInfo<Value>& args) {
 		args.GetReturnValue().Set(Boolean::New(isolate, false));
 	}
 }
+
 
 // -- WinProcess
 Persistent<Function> WinProcess::constructor;
@@ -314,6 +361,8 @@ Isolate* isolate = Isolate::GetCurrent();
   //NODE_SET_PROTOTYPE_METHOD(tpl, "getBaseAddress", getBaseAddress);
   NODE_SET_PROTOTYPE_METHOD(tpl, "close", Close);
   NODE_SET_PROTOTYPE_METHOD(tpl, "scanBuffer", ScanBuffer);  
+  NODE_SET_PROTOTYPE_METHOD(tpl, "scanDouble", ScanDouble);  
+  NODE_SET_PROTOTYPE_METHOD(tpl, "scanDoubleList", ScanDoubleList);  
   
   constructor.Reset(isolate, tpl->GetFunction());
   exports->Set(String::NewFromUtf8(isolate, "Process"),tpl->GetFunction());
@@ -338,8 +387,7 @@ void WinProcess::New(const FunctionCallbackInfo<Value>& args) {
 	  }
 }
 
-void WinProcess::Open(const FunctionCallbackInfo<Value>& args) 
-{
+void WinProcess::Open(const FunctionCallbackInfo<Value>& args) {
     Isolate* isolate = Isolate::GetCurrent();
     HandleScope scope(isolate);
     WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());
@@ -348,8 +396,7 @@ void WinProcess::Open(const FunctionCallbackInfo<Value>& args)
     args.GetReturnValue().Set(Number::New(isolate, (uint64_t)obj->_handle));
 }
 
-void WinProcess::Close(const FunctionCallbackInfo<Value>& args) 
-{
+void WinProcess::Close(const FunctionCallbackInfo<Value>& args) {
     Isolate* isolate = Isolate::GetCurrent();
     HandleScope scope(isolate); 
     WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());
@@ -359,60 +406,13 @@ void WinProcess::Close(const FunctionCallbackInfo<Value>& args)
     }
 }
 
-void WinProcess::Terminate(const FunctionCallbackInfo<Value>& args) 
-{
+void WinProcess::Terminate(const FunctionCallbackInfo<Value>& args) {
     Isolate* isolate = Isolate::GetCurrent();
     HandleScope scope(isolate);
     WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());
     args.GetReturnValue().Set(Boolean::New(isolate, TerminateProcess(obj->_handle, 1)));
 }
  
-void WinProcess::ScanBuffer(const FunctionCallbackInfo<Value>& args) {
- 	Isolate* isolate = Isolate::GetCurrent();
-    HandleScope scope(isolate);
-	
-	// param 1: buffer 
-	Local<Object> bufferObj    = args[0]->ToObject();
-	char*         bufferData   = Buffer::Data(bufferObj);
-	size_t        bufferLength = Buffer::Length(bufferObj);
-	// param 2: pulo -> pulo=1 "HELLO" pulo=2 "H E L L O", pulo=3 "H  E  L  L  O" ...
-	int pulo  = args[1]->IntegerValue();
-	if (pulo <=0) pulo =1;
-
-
-  	WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());
-	
-
-    MEMORY_BASIC_INFORMATION mbi; 
-    unsigned int start, end; 
-    void * fromAddress = 0;
-	void * lastFrom = 0;
-    void * address = 0;
-    SYSTEM_INFO si;        GetSystemInfo(&si);
-    do 
-    { 
-        VirtualQueryEx(obj->_handle,(void*) fromAddress, &mbi, sizeof(MEMORY_BASIC_INFORMATION)); 
-        if((mbi.State == MEM_COMMIT) && (mbi.Protect == PAGE_READWRITE) && (mbi.Type == MEM_PRIVATE)) 
-        { 
-            start = (unsigned)mbi.BaseAddress; 
-            end = (unsigned)mbi.BaseAddress+mbi.RegionSize; 
-			//std::cout<<"start region:"<< std::hex << start <<" end "<< std::hex<< end << "\n";	
-            address=Scanchar(start, end, obj->_handle,bufferData,bufferLength,pulo); 
-	
-            if (address> 0){
-                   // std::cout<<"ENDERECO ENCONTRADO:"<< std::hex << address << "\n";
-					break;
-            }
- 
- 
-        } 
-		lastFrom = fromAddress;
-        fromAddress = (void*)( (unsigned long)fromAddress + mbi.RegionSize); 
-		if (fromAddress<lastFrom) break;
-    } while(fromAddress < si.lpMaximumApplicationAddress); 
-	std::cout<<"FIM loop\n\n";
-	args.GetReturnValue().Set(Number::New(isolate,(int)address));
-}  
 
  
 void WinProcess::ReadMemory(const FunctionCallbackInfo<Value>& args) {
@@ -460,6 +460,142 @@ void WinProcess::WriteMemory(const FunctionCallbackInfo<Value>& args) {
 		args.GetReturnValue().Set(Number::New(isolate, GetLastError()));
 	}
 }
+
+
+
+void WinProcess::ScanBuffer(const FunctionCallbackInfo<Value>& args) {
+ 	Isolate* isolate = Isolate::GetCurrent();
+    HandleScope scope(isolate);
+	
+	// param 1: buffer 
+	Local<Object> bufferObj    = args[0]->ToObject();
+	char*         bufferData   = Buffer::Data(bufferObj);
+	size_t        bufferLength = Buffer::Length(bufferObj);
+	// param 2: pulo -> pulo=1 "HELLO" pulo=2 "H E L L O", pulo=3 "H  E  L  L  O" ...
+	int pulo  = args[1]->IntegerValue();
+	if (pulo <=0) pulo =1;
+
+
+  	WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());
+	
+
+    MEMORY_BASIC_INFORMATION mbi; 
+    unsigned int start, end; 
+    void * fromAddress = 0;
+	void * lastFrom = 0;
+    void * address = 0;
+    SYSTEM_INFO si;        GetSystemInfo(&si);
+	int interacao = 0;
+    do 
+    { 
+        VirtualQueryEx(obj->_handle,(void*) fromAddress, &mbi, sizeof(MEMORY_BASIC_INFORMATION)); 
+        if((mbi.State == MEM_COMMIT) && (mbi.Protect == PAGE_READWRITE) && (mbi.Type == MEM_PRIVATE)) 
+        { 
+			interacao++;
+            start = (unsigned)mbi.BaseAddress; 
+            end = (unsigned)mbi.BaseAddress+mbi.RegionSize; 
+			//std::cout<<"start region:"<< std::hex << start <<" end "<< std::hex<< end << "\n";	
+            address=ScanChar(start, end, obj->_handle,bufferData,bufferLength,pulo); 
+	
+            if (address> 0){
+                   // std::cout<<"ENDERECO ENCONTRADO:"<< std::hex << address << "\n";
+					break;
+            }
+ 
+ 
+        } 
+		lastFrom = fromAddress;
+        fromAddress = (void*)( (unsigned long)fromAddress + mbi.RegionSize); 
+		if (fromAddress<lastFrom) break;
+    } while(fromAddress < si.lpMaximumApplicationAddress && obj->_pid); 
+	std::cout<<"Realizado "<< std::dec<<interacao <<" buscas. Valor endereco: "<<std::hex<<address<<"\n\n";
+	args.GetReturnValue().Set(Number::New(isolate,(int)address));
+}  
+ 
+void WinProcess::ScanDouble(const FunctionCallbackInfo<Value>& args) {
+ 	Isolate* isolate = Isolate::GetCurrent();
+    HandleScope scope(isolate);
+	
+	double  valor_marcador = args[0]->Uint32Value();
+  	WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());
+
+
+    MEMORY_BASIC_INFORMATION mbi; 
+    unsigned int start, end; 
+    void * fromAddress = 0;
+	void * lastFrom = 0;
+    void * address = 0;
+    SYSTEM_INFO si;     
+	GetSystemInfo(&si);
+	int interacao = 0;
+    do 
+    { 
+        VirtualQueryEx(obj->_handle,(void*) fromAddress, &mbi, sizeof(MEMORY_BASIC_INFORMATION)); 
+        if((mbi.State == MEM_COMMIT) && (mbi.Protect == PAGE_READWRITE) && (mbi.Type == MEM_PRIVATE)) 
+        { 
+			interacao++;
+            start = (unsigned)mbi.BaseAddress; 
+            end = (unsigned)mbi.BaseAddress+mbi.RegionSize; 
+			//std::cout<<"start region:"<< std::hex << start <<" end "<< std::hex<< end << "\n";	
+            address=ScanNumberDouble(start, end, obj->_handle,valor_marcador); 
+	
+            if (address> 0){
+					break;
+            }
+        } 
+		lastFrom = fromAddress;
+        fromAddress = (void*)( (unsigned long)fromAddress + mbi.RegionSize); 
+		if (fromAddress<lastFrom) break;
+    } while(fromAddress < si.lpMaximumApplicationAddress && obj->_pid); 
+	std::cout<<"Realizado "<< std::dec<<interacao<<" buscas. Valor endereco: "<<std::hex<<address<<"\n\n";
+
+	args.GetReturnValue().Set(Number::New(isolate,(int)address));
+}  
+
+void WinProcess::ScanDoubleList(const FunctionCallbackInfo<Value>& args) {
+ 	Isolate* isolate = Isolate::GetCurrent();
+    HandleScope scope(isolate);
+	int tamanho = args.Length()-1;
+		
+	double *bufferData = new double[tamanho];
+	int tamanhodouble = args[0]->IntegerValue();
+	
+	for (unsigned i=0; i< tamanho;i++){
+			bufferData[i] = args[i+1]->Uint32Value();			
+	}
+
+  	WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());
+
+    MEMORY_BASIC_INFORMATION mbi; 
+    unsigned int start, end; 
+    void * fromAddress = 0;
+	void * lastFrom = 0;
+    void * address = 0;
+    SYSTEM_INFO si;     
+	GetSystemInfo(&si);
+	int interacao=0;
+    do 
+    { 
+        VirtualQueryEx(obj->_handle,(void*) fromAddress, &mbi, sizeof(MEMORY_BASIC_INFORMATION)); 
+        if((mbi.State == MEM_COMMIT) && (mbi.Protect == PAGE_READWRITE) && (mbi.Type == MEM_PRIVATE)) 
+        { 	interacao++;
+            start = (unsigned)mbi.BaseAddress; 
+            end = (unsigned)mbi.BaseAddress+mbi.RegionSize; 
+			//std::cout<<"start region:"<< std::hex << start <<" end "<< std::hex<< end << "\n";	
+            address=ScanNumberDoubleList(start, end, obj->_handle,bufferData,tamanho,tamanhodouble); 	
+            if (address> 0){
+                   // std::cout<<"ENDERECO ENCONTRADO:"<< std::hex << address << "\n";
+					break;
+            }
+        } 
+		lastFrom = fromAddress;
+        fromAddress = (void*)( (unsigned long)fromAddress + mbi.RegionSize); 
+		if (fromAddress<lastFrom) break;
+    } while(fromAddress < si.lpMaximumApplicationAddress && obj->_pid); 
+	std::cout<<"Realizado "<<std::dec<< interacao <<" buscas. Valor endereco: "<<std::hex<<address<<"\n\n";
+	args.GetReturnValue().Set(Number::New(isolate,(int)address));
+}  
+
 
 NODE_MODULE(scan, WinProcess::Init);
 
