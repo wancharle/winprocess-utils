@@ -1,7 +1,7 @@
 'use strict';
 var scan = require('./winprocess');
 //console.log('Hello', scan.hello("World of Warcraft",new Buffer("ABC")));
-function teste1(){
+function teste(){
 	var VARIAVEL = "TESTEVAR==!!!"
 
 	console.log("\n\n======== TESTE LOCAL =========")
@@ -15,7 +15,7 @@ function teste1(){
 	var lido=memBuffer.toString()
 	console.log("<",lido,">")
 	if (lido =="TESTEVAR==!!!"){console.log('leitura: ok!\n')}
-	teste1.writeMemory(endereco, new Buffer("FIM TESTE"));
+	//teste1.writeMemory(endereco, new Buffer("FIM TESTE"));
 
 	memBuffer = teste1.readMemory(endereco, 13);
 	lido=memBuffer.toString()
@@ -26,22 +26,27 @@ function teste1(){
 	teste1.close()
 
 }
-teste1()
+//teste()
 function wow(){
 var pid = scan.getProcessIdByWindow("World of Warcraft")
 	console.log("Process ID=",pid)
-	var teste1 = new scan.Process(pid)
-	teste1.open()
-	var endereco = teste1.scanDouble(2863311531)
+	var teste2 = new scan.Process(pid)
+	teste2.open()
+	var endereco = teste2.scanDouble(2863311531)
 	console.log('search1',endereco)
-	var endereco = teste1.scanDoubleList(16,2863311531,86331153,633115,3311)
+	var endereco = teste2.scanDoubleList(16,2863311531,86331153,633115,3311)
 	console.log('search2',endereco)
-	var valor = teste1.readDouble(endereco+16*3);
-	console.log('valor=',valor, teste1.readDouble(endereco+16*4), teste1.readDouble(endereco+16*5),teste1.readDouble(endereco+16*6))
-	teste1.writeDouble(endereco+16*5,27)
-	console.log('valor=',valor, teste1.readDouble(endereco+16*4), teste1.readDouble(endereco+16*5),teste1.readDouble(endereco+16*6))
-	
-	teste1.close()
+	var valor = teste2.readDouble(endereco+16*3);
+	console.log('valor=',valor, teste2.readDouble(endereco+16*4), teste2.readDouble(endereco+16*5),teste2.readDouble(endereco+16*6))
+	teste2.writeDouble(endereco+16*5,-1)
+	for (var i=1;i<100;i++){
+	var nums = teste2.readNumeros(endereco,4000);
+	nums[7] = 10;
+	nums[3998] = i;
+	teste2.writeNumeros(endereco,nums);
+	console.log(teste2.readNumeros(endereco,4000)[3998]);
+	}
+	teste2.close()
 	
 }
 wow()

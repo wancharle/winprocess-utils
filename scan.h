@@ -8,18 +8,7 @@
 #include <node.h>
 #include <node_object_wrap.h>
 
-HWND get_process_window(std::string);
-HANDLE get_process_handle(HWND);
-
-void get_string(char * texto);
-double get_wow_status();
-void* Search( HANDLE hProcess);
-void escreve_string(  char * texto);
- void  SetDebugPrivileges();
-int esta_logado();
-int esta_rodando();
-
-
+void  SetDebugPrivileges();
  
 class WinProcess : public node::ObjectWrap {
  public:
