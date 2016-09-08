@@ -39,6 +39,9 @@ class WinProcess : public node::ObjectWrap {
   
   static void ReadMemory(const v8::FunctionCallbackInfo<v8::Value>& args);
   static void WriteMemory(const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void ReadDouble(const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void WriteDouble(const v8::FunctionCallbackInfo<v8::Value>& args);
+
 
   static void ScanBuffer(const v8::FunctionCallbackInfo<v8::Value>& args);
   static void ScanDouble(const v8::FunctionCallbackInfo<v8::Value>& args);

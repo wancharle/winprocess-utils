@@ -218,8 +218,8 @@ void *ScanNumberDoubleList(DWORD start, DWORD end, HANDLE hProcess, double* marc
 		for(unsigned j=0;j<tamanho;){
 			valor = *((double*)(buffer+i+j*tamanhodouble)); // 16 é tamanho gasto para armazenar um double em 64bits 
 			if(valor== marcador[j]) {
-				std::cout<<valor<<"|"<< std::hex<<(start+i+j*tamanhodouble)<<"|\n";
-					acertos+=1;
+				//std::cout<<valor<<"|"<< std::hex<<(start+i+j*tamanhodouble)<<"|\n";
+				acertos+=1;
 			}else{
 				break;
 			}
@@ -357,9 +357,12 @@ Isolate* isolate = Isolate::GetCurrent();
   NODE_SET_PROTOTYPE_METHOD(tpl, "open", Open);
   NODE_SET_PROTOTYPE_METHOD(tpl, "readMemory", ReadMemory);
   NODE_SET_PROTOTYPE_METHOD(tpl, "writeMemory", WriteMemory);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "readDouble", ReadDouble); 
+  NODE_SET_PROTOTYPE_METHOD(tpl, "writeDouble", WriteDouble); 
   NODE_SET_PROTOTYPE_METHOD(tpl, "terminate", Terminate);
   //NODE_SET_PROTOTYPE_METHOD(tpl, "getBaseAddress", getBaseAddress);
   NODE_SET_PROTOTYPE_METHOD(tpl, "close", Close);
+  
   NODE_SET_PROTOTYPE_METHOD(tpl, "scanBuffer", ScanBuffer);  
   NODE_SET_PROTOTYPE_METHOD(tpl, "scanDouble", ScanDouble);  
   NODE_SET_PROTOTYPE_METHOD(tpl, "scanDoubleList", ScanDoubleList);  
@@ -413,7 +416,30 @@ void WinProcess::Terminate(const FunctionCallbackInfo<Value>& args) {
     args.GetReturnValue().Set(Boolean::New(isolate, TerminateProcess(obj->_handle, 1)));
 }
  
+void WinProcess::ReadDouble(const FunctionCallbackInfo<Value>& args) {
+ 	Isolate* isolate = Isolate::GetCurrent();
+    HandleScope scope(isolate);
+  
+  	WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());
+  	double valor;
+  	ReadProcessMemory(obj->_handle, (void *)args[0]->IntegerValue(), &valor, sizeof(double), NULL);
+	//std::cout<<"DDDDD="<<valor<<"\n";
+    args.GetReturnValue().Set(Number::New(isolate,valor));    
+}
 
+void WinProcess::WriteDouble(const FunctionCallbackInfo<Value>& args) {
+	Isolate* isolate = Isolate::GetCurrent();
+    HandleScope scope(isolate);
+	
+	WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());
+	double valor = args[1]->NumberValue();
+	if(WriteProcessMemory(obj->_handle, (void*)args[0]->IntegerValue(), &valor, sizeof(double), NULL)){
+		args.GetReturnValue().Set(Boolean::New(isolate, true));	
+	}
+	else{
+		args.GetReturnValue().Set(Number::New(isolate, GetLastError()));
+	}
+}
  
 void WinProcess::ReadMemory(const FunctionCallbackInfo<Value>& args) {
  	Isolate* isolate = Isolate::GetCurrent();
@@ -561,7 +587,7 @@ void WinProcess::ScanDoubleList(const FunctionCallbackInfo<Value>& args) {
 	int tamanhodouble = args[0]->IntegerValue();
 	
 	for (unsigned i=0; i< tamanho;i++){
-			bufferData[i] = args[i+1]->Uint32Value();			
+			bufferData[i] = args[i+1]->NumberValue();			
 	}
 
   	WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());

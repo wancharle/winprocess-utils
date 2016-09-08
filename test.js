@@ -36,6 +36,10 @@ var pid = scan.getProcessIdByWindow("World of Warcraft")
 	console.log('search1',endereco)
 	var endereco = teste1.scanDoubleList(16,2863311531,86331153,633115,3311)
 	console.log('search2',endereco)
+	var valor = teste1.readDouble(endereco+16*3);
+	console.log('valor=',valor, teste1.readDouble(endereco+16*4), teste1.readDouble(endereco+16*5),teste1.readDouble(endereco+16*6))
+	teste1.writeDouble(endereco+16*5,27)
+	console.log('valor=',valor, teste1.readDouble(endereco+16*4), teste1.readDouble(endereco+16*5),teste1.readDouble(endereco+16*6))
 	
 	teste1.close()
 	
