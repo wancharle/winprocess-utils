@@ -145,6 +145,10 @@ Isolate* isolate = Isolate::GetCurrent();
   NODE_SET_PROTOTYPE_METHOD(tpl, "scanDouble", ScanDouble);  
   NODE_SET_PROTOTYPE_METHOD(tpl, "scanDoubleList", ScanDoubleList);  
   
+  NODE_SET_PROTOTYPE_METHOD(tpl, "ReadFloat", ReadFloat); 
+  NODE_SET_PROTOTYPE_METHOD(tpl, "ReadUInt64", ReadUint64); 
+  NODE_SET_PROTOTYPE_METHOD(tpl, "ReadUInt", ReadUint); 
+
   constructor.Reset(isolate, tpl->GetFunction());
   exports->Set(String::NewFromUtf8(isolate, "Process"),tpl->GetFunction());
   NODE_SET_METHOD(exports, "getProcessIdByWindow", getProcessIdByWindow);
@@ -402,6 +406,53 @@ void WinProcess::ScanDoubleList(const FunctionCallbackInfo<Value>& args) {
 	std::cout<<"Realizado "<<std::dec<< interacao <<" buscas. Valor endereco: "<<std::hex<<address<<"\n\n";
 	args.GetReturnValue().Set(Number::New(isolate,(int)address));
 }  
+
+void WinProcess::ReadFloat(const FunctionCallbackInfo<Value>& args) {
+ 	Isolate* isolate = Isolate::GetCurrent();
+    HandleScope scope(isolate);
+  
+  	WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());
+  	float valor;
+	SIZE_T bytesRead;
+  	if(ReadProcessMemory(obj->_handle, (void *)args[0]->IntegerValue(), &valor, sizeof(float), &bytesRead)){
+		//std::cout<<"li="<<valor<<" com "<< bytesRead <<"\n";
+		args.GetReturnValue().Set(Number::New(isolate,valor)); 
+	}else{
+		args.GetReturnValue().Set(Number::New(isolate, GetLastError()));
+	}	
+}
+
+void WinProcess::ReadUint64(const FunctionCallbackInfo<Value>& args) {
+ 	Isolate* isolate = Isolate::GetCurrent();
+    HandleScope scope(isolate);
+  
+  	WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());
+  	unsigned long long valor;
+	SIZE_T bytesRead;
+  	if(ReadProcessMemory(obj->_handle, (void *)args[0]->IntegerValue(), &valor, sizeof(unsigned long long), &bytesRead)){
+		//std::cout<<"li="<<valor<<" com "<< bytesRead <<"\n";
+		args.GetReturnValue().Set(Number::New(isolate,valor)); 
+	}else{
+		args.GetReturnValue().Set(Number::New(isolate, GetLastError()));
+	}	
+}
+
+void WinProcess::ReadUint(const FunctionCallbackInfo<Value>& args) {
+ 	Isolate* isolate = Isolate::GetCurrent();
+    HandleScope scope(isolate);
+  
+  	WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());
+  	unsigned long  valor;
+	SIZE_T bytesRead;
+  	if(ReadProcessMemory(obj->_handle, (void *)args[0]->IntegerValue(), &valor, sizeof(unsigned long), &bytesRead)){
+		//std::cout<<"li="<<valor<<" com "<< bytesRead <<"\n";
+		args.GetReturnValue().Set(Number::New(isolate,valor)); 
+	}else{
+		args.GetReturnValue().Set(Number::New(isolate, GetLastError()));
+	}	
+}
+
+
 
 
 NODE_MODULE(scan, WinProcess::Init);
