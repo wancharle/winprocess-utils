@@ -7,6 +7,9 @@
 #include <v8.h>
 
 
+#include <tlhelp32.h>
+#include <tchar.h>
+
 using namespace v8;
 using namespace node;
 
@@ -97,6 +100,30 @@ void SetDebugPrivileges(){
     CloseHandle(tokenHandle);
 }
 
+DWORD_PTR GetModuleBase(DWORD dwProcID, TCHAR *szModuleName)
+{
+    DWORD_PTR dwModuleBaseAddress = 0;
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, dwProcID);
+    if (hSnapshot != INVALID_HANDLE_VALUE)
+    {
+        MODULEENTRY32 ModuleEntry32;
+        ModuleEntry32.dwSize = sizeof(MODULEENTRY32);
+        if (Module32First(hSnapshot, &ModuleEntry32))
+        {
+            do
+            {
+                if (_tcsicmp(ModuleEntry32.szModule, szModuleName) == 0)
+                {
+                    dwModuleBaseAddress = (DWORD_PTR)ModuleEntry32.modBaseAddr;
+                    break;
+                }
+            } while (Module32Next(hSnapshot, &ModuleEntry32));
+        }
+        CloseHandle(hSnapshot);
+    }
+    return dwModuleBaseAddress;
+}
+
 
 void getProcessIdByWindow(const v8::FunctionCallbackInfo<Value>& args) {
  	Isolate* isolate = args.GetIsolate();  
@@ -148,12 +175,29 @@ Isolate* isolate = Isolate::GetCurrent();
   NODE_SET_PROTOTYPE_METHOD(tpl, "ReadFloat", ReadFloat); 
   NODE_SET_PROTOTYPE_METHOD(tpl, "ReadUInt64", ReadUint64); 
   NODE_SET_PROTOTYPE_METHOD(tpl, "ReadUInt", ReadUint); 
+ NODE_SET_PROTOTYPE_METHOD(tpl, "getBaseAddress", getBaseAddress);
 
   constructor.Reset(isolate, tpl->GetFunction());
   exports->Set(String::NewFromUtf8(isolate, "Process"),tpl->GetFunction());
   NODE_SET_METHOD(exports, "getProcessIdByWindow", getProcessIdByWindow);
  }
  
+void WinProcess::getBaseAddress(const FunctionCallbackInfo<Value>& args) 
+{
+    Isolate* isolate = Isolate::GetCurrent();
+    HandleScope scope(isolate); 
+    WinProcess* obj = ObjectWrap::Unwrap<WinProcess>(args.Holder());
+    if(obj->_handle){
+        v8::String::Utf8Value param1(args[0]->ToString());
+        std::string processName = std::string(*param1);
+
+        DWORD BaseAddr2 = GetModuleBase(obj->_pid, (TCHAR *)processName.c_str());
+        args.GetReturnValue().Set(Number::New(isolate, (int)BaseAddr2));
+    }else{
+
+        std::cout<<"sem handle";
+}
+}
 void WinProcess::New(const FunctionCallbackInfo<Value>& args) {
 	Isolate* isolate = Isolate::GetCurrent();
 	if (args.IsConstructCall()) {

@@ -249,16 +249,20 @@ function GameReader(){
     var CurrentObject = new WowObject()
     var ClientConnection = 0;
     var FirstObject = 0;
-    var BaseAddress = 0x400000;
     var FirstObjectOffset = Pointers.ObjectManager.FirstObject;
     var TotalWowObjects = 0;
 
     var WowReader = getScanWow() 
+    WowReader.open()
+
+    var BaseAddress = WowReader.getBaseAddress("WoW.exe");
+    console.log("BASE:",BaseAddress);
     var StaticClientConnection ;
 
     var CurrentTargetGUID ;
 
     function init(){
+    /*
         StaticClientConnection = BaseAddress + Pointers.ObjectManager.CurMgrPointer;
         CurrentTargetGUID = BaseAddress + Pointers.StaticPointers.CurrentTargetGUID;
         WowReader.open()
@@ -267,6 +271,7 @@ function GameReader(){
         console.log(p);
         console.log(getLocalTarget());
         console.log(getAllObjects());
+*/
 
     }
 
